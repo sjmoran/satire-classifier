@@ -14,7 +14,7 @@ A number of different feature types are explored:
 
 A [Multinomial Naive Bayes](http://scikit-learn.org/stable/modules/generated/sklearn.naive_bayes.MultinomialNB.html) model on discrete count-based features appears to perform very well for this task, and so more sophisticated models were not explored. The document embeddings are modelled using a [Gaussian Naive Bayes](http://scikit-learn.org/stable/modules/generated/sklearn.naive_bayes.GaussianNB.html) model. The probabilities output from the Multinomial and Naive Bayes models are combined by treating the class membership probabilities from both models as a new 4-dimensional feature space and learning another Gaussian Naive Bayes model on those features to predict the class labels.
 
-The model achieves a mean 10-fold cross-validation FScore of 0.93, and a test set FScore of 0.74. This could probably be improved by carefully crafting more features (e.g. POS tagging features) and perhaps, to a lesser extent, using more powerful classifiers.
+The model achieves a mean 10-fold cross-validation FScore of 0.93, and a test set FScore of 0.74. This could be improved by carefully crafting more features (e.g. POS tagging features) and perhaps, to a lesser extent, using more powerful classifiers.
 
 ## Tackling the satire detection task
 
