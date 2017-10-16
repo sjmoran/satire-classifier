@@ -775,12 +775,12 @@ class SatireClassifier:
         """
         try:
                     timestamp = time.strftime("%Y%m%d-%H%M%S")   # timestamp for the directory name
-                    out_dirpath = self.out_dirpath+"/"+experiment_name+"_"+timestamp
+                    self.out_dirpath = self.out_dirpath+"/"+experiment_name+"_"+timestamp
                     '''
                     Make the output directory if it doesnt exist
                     '''
-                    if not os.path.exists(self.out_dirpath+"/"+experiment_name+"_"+timestamp):
-                        os.makedirs(self.out_dirpath+"/"+experiment_name+"_"+timestamp)
+                    if not os.path.exists(self.out_dirpath):
+                       os.makedirs(self.out_dirpath)
 
                     '''
                     Extract text features and load the training and testing datasets into pandas dataframes
