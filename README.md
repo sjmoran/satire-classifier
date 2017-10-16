@@ -25,9 +25,9 @@ The satire detection task can be further broken down further along the axes of h
 Effective signals for automatic satire detection range from simple linguistic features (e.g. punctuation, presence of certain words), to more involved signals such as variation in sentiment, entity detection and resolution, part-of-speech tagging and grammar analysis. All of these methods of pure text analysis are limited in the sense that context and real-world knowledge is also invaluable for the task. It may be very challenging to integrate this type of information into a machine learning algorithm. For example the algorithm would need detailed understanding of the entitites in "Bank Of England Governor Mervyn King is a
 Queen, Says Fed Chairman Ben Bernanke" to ascertain that this sentence is absurd and likely from a satirical article. This signal cannot be gleaned from surface features alone.
 
-The experiments in this repository explore how far simple linguistic features can get us on the task. The classifier is tested on the dataset of [Burfoot and Baldwin](http://www.aclweb.org/anthology/P09-2041). This is a small handpicked dataset and is likely to be of limited value for real-world applications. Given my experimental results here, the key to being effective at satire detection appears to be more in the features and training data and less so in powerful classifiers. To this end, I would suggest gathering all the articles on reputable well-known satirical websites (e.g. The Onion) and using those as positive exemplars for evaluation. Furthermore, one could also crawl Facebook, Twitter, Reddit, Amazon reviews etc for posts explicitly labelled as satirical or one of its close relations (#sarcasm, #irony). Going further, creating a platform that encourages users to add high-quality labels to articles would be a particularly useful source of training data.
+The experiments in this repository explore how far simple linguistic features can get us on the task. The classifier is tested on the dataset of [Burfoot and Baldwin](http://www.aclweb.org/anthology/P09-2041). This is a small handpicked dataset and is likely to be of limited value for real-world applications. A real-world application of satire detection would require a much richer and larger training dataset. I would suggest gathering all the articles on reputable well-known satirical websites (e.g. The Onion) and using those as positive exemplars for evaluation. Furthermore, one could also crawl Facebook, Twitter, Reddit, Amazon reviews etc for posts explicitly labelled as satirical or one of its close relations (#sarcasm, #irony). Going further, creating a platform that encourages users to add high-quality labels to articles would be a particularly useful source of training data.
 
-With a large enough dataset we could investigate using a convolutional neural network to automatically discover features for the task, removing the need for extenseive feature hand-crafting.
+With a large enough dataset we could investigate using a convolutional neural network to automatically discover features for the task, removing the need for extensive feature hand-crafting. It would be interesting to compare this classifier to shallow models using hand-crafted features.
 
 ## Experimental Results
 
@@ -41,11 +41,11 @@ The model is tested on the dataset of [Burfoot and Baldwin](http://www.aclweb.or
 | + *Watch word list*              | 0.91  | 0.72             |
 | + *Word2vec*              |  0.93    |  0.74           |
 
-The unigram features reap most of the gain in FScore on this dataset. Punctuation/capitalisation features give another boost demonstrating their importance for the satire detection task (! tends to be discriminative of satire articles). Sentiment features boost training performance by a small amount but hurt testing performance. The watch word (intensifier, interjection) feature hurts performance on the training dataset but benefits testing FScore. Finaly integrating the continuous word2vec features boosts training FScore (very lower dimensional word vectors - 10 dimensions - appear to be best here).
+The unigram features reap most of the gain in FScore on this dataset. Punctuation/capitalisation features give another boost demonstrating their importance for the satire detection task (! tends to be discriminative of satirical articles). Sentiment features boost training performance by a small amount but hurt testing performance. The watch word (intensifier, interjection) feature hurts performance on the training dataset but benefits testing FScore. Finaly integrating the continuous word2vec features boosts training FScore (very lower dimensional word vectors - 10 dimensions - appear to be best here).
 
-If we choose the features leading to the highest 10-fold cross-validation score (0.93) we would select all the features, which gives us a test set score of 0.74. The original paper by Burfoot and Baldwin obtain a best score of 0.78 on the test set.
+If we choose the features leading to the highest 10-fold cross-validation score (0.93) we would select all the features, which gives us a test set score of 0.74. The original paper by Burfoot and Baldwin obtain a best score of 0.78 on the same test set.
 
-The small gains in effectiveness after adding each feature would need to be cross-checked with a statistical significance test (e.g. t-test) to see if they are actually statistically significant.
+A limitation of this study is that the small gains in effectiveness after adding each feature would need to be cross-checked with a statistical significance test (e.g. t-test) to see if they are actually statistically significant.
 
 The [DummyClassifier](http://scikit-learn.org/stable/modules/generated/sklearn.dummy.DummyClassifier.html) which generates predictions uniformly at random performs the best out of all DummyClassifiers (uniform, stratified, most frequent etc). It scores a mean 0.10 FScore via 10-fold cross-validation on the training dataset using all the available feature sets combined. This sanity check shows that our informed classifier is performing better than random.
 
@@ -55,8 +55,8 @@ The following 25 features were found to be most discriminative using a Chi2 test
 
 1. !
 2. '
-3. *
-4. ?
+3. \*
+4. \?
 5. bush
 6. exxon
 7. fossil
