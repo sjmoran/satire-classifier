@@ -779,8 +779,8 @@ class SatireClassifier:
                     '''
                     Make the output directory if it doesnt exist
                     '''
-                    if not os.path.exists(self.out_dirpath+"/satire_classifier_"+timestamp):
-                        os.makedirs(self.out_dirpath+"/satire_classifier_"+timestamp)
+                    if not os.path.exists(self.out_dirpath+"/"+experiment_name+"_"+timestamp):
+                        os.makedirs(self.out_dirpath+"/"+experiment_name+"_"+timestamp)
 
                     '''
                     Extract text features and load the training and testing datasets into pandas dataframes
