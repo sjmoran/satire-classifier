@@ -43,7 +43,7 @@ The model is tested on the dataset of [Burfoot and Baldwin](http://www.aclweb.or
 
 The unigram features achieve most of the gain in FScore on this dataset. Punctuation/capitalisation features provide another boost in effectiveness demonstrating their importance for the satire detection task (e.g. ! tends to appear frequently in satirical articles). Sentiment features boost training performance by a small amount but hurt testing performance. The watch word (intensifier, interjection) feature hurts performance on the training dataset but benefits testing FScore. Finaly, integrating the continuous word2vec features boosts training FScore. In particular, lower dimensional word vectors - 10 dimensions - appear to be most effective here.
 
-If we choose the features leading to the highest 10-fold cross-validation score (0.93) we would select all the available features, which gives us a test set score of 0.74. The original paper by Burfoot and Baldwin obtain a best score of 0.78 on the same test set.
+If we choose the features leading to the highest 10-fold cross-validation score (0.93) we would select all the available features, which gives us a test set score of 0.74. The original paper by Burfoot and Baldwin obtain a best score of 0.79 on the same test set.
 
 A limitation of this study is that the small gains in effectiveness after adding each feature would need to be cross-checked with a statistical significance test (e.g. t-test) to see if they are actually statistically significant.
 
