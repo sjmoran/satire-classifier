@@ -49,35 +49,40 @@ A limitation of this study is that the small gains in effectiveness after adding
 
 The [DummyClassifier](http://scikit-learn.org/stable/modules/generated/sklearn.dummy.DummyClassifier.html) which generates predictions uniformly at random performs the best out of all DummyClassifiers (uniform, stratified, most frequent etc). It scores a mean 0.10 FScore via 10-fold cross-validation on the training dataset using all the available feature sets combined. This sanity check shows that our informed classifier is performing better than random.
 
-## Top-25 most discriminative features
+## Top-30 most discriminative features
 
-The following 25 features were found to be most discriminative using a Chi2 test against the class label:
+The following 30 features were found to be most discriminative using a Chi2 test against the class label:
 
 1. !
 2. '
-3. \*
-4. \?
-5. bush
-6. exxon
-7. fossil
-8. hair
-9. mat
-10. mccain
-11. mobil
-12. mr
-13. nato
-14. obama
-15. phelps
-16. rutherford
-17. slicked
-18. tha
-19. you
-20. Sentiment_pos
-21. Sentiment_neg
-22. Token_upper
-23. Token_lower
-24. Token_mixed
-25. Token_punctuation
+3. *
+4. 2008
+5. ?
+6. ass
+7. bush
+8. exxon
+9. fossil
+10. hair
+11. like
+12. mat
+13. mccain
+14. mobil
+15. mr
+16. nato
+17. obama
+18. palin
+19. phelps
+20. rutherford
+21. shit
+22. slicked
+23. tha
+24. Sentiment_pos
+25. Sentiment_neg
+26. Sentiment_change
+27. Token_lower
+28. Token_mixed
+29. Token_punctuation
+30. Watch_word_count
 
 ## Prerequisites:
 
