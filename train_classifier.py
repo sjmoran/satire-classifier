@@ -24,9 +24,9 @@ import string
 from nltk.stem.porter import PorterStemmer
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 from sklearn.naive_bayes import MultinomialNB, GaussianNB
-from gensim.models import Word2Vec
+from gensim.models import Word2Vec,Doc2Vec
 from nltk.corpus import stopwords as sw
-from sklearn import linear_model
+from sklearn import linear_model, svm
 import random
 import math
 from collections import defaultdict
@@ -182,7 +182,8 @@ class SatireClassifier:
 
                 params = {
                         'DummyClassifier': { 'strategy': ["stratified", "most_frequent", "prior", "uniform"] },
-                        'GaussianNB':  {'priors' : [None, [.1,.9],[.2, .8],[.3, .7],[.4, .6],[.5, .5],[.6, .4],[.7, .3],[.8, .2],[.9, .1]],
+                        'GaussianNB': {
+                        'priors' : [None, [.1,.9],[.2, .8],[.3, .7],[.4, .6],[.5, .5],[.6, .4],[.7, .3],[.8, .2],[.9, .1]],
                         },}
         else:
                 models = {
@@ -205,7 +206,7 @@ class SatireClassifier:
 
         return best_models_dict
 
-    def _get_word2vec_features(self, sentences, size=100, model=None):
+    def _get_word2vec_features(self, documents, tfidf_df, size=100, model=None):
         """Extracts word2vec features from a document. The words are averaged to form a single vector for a document. 
 
         :param sentences: list of documents
@@ -217,13 +218,17 @@ class SatireClassifier:
         """
         embedding_df=pd.DataFrame()
         if not model:
-                word2vec_sentences=[]
-                for sentence in sentences:
+                word2vec_documents=[]
+                for doc in documents:
                         average_vec=[]
-                        words=sentence.split(" ")
-                        word2vec_sentences.append(words)
-
-                model = Word2Vec(word2vec_sentences, size=size, window=5, min_count=1, workers=4)
+                        words=doc.split(" ")
+                        word_list_temp=[]
+                        for word in words:
+                                word=word.lower()
+                                word_list_temp.append(word)
+                        words=word_list_temp
+                        word2vec_documents.append(words)
+                model = Word2Vec(word2vec_documents, size=size, window=5, min_count=1, workers=4)
 
         columns=[]
         for i in range(0,size):
@@ -231,14 +236,18 @@ class SatireClassifier:
         embedding_df=pd.DataFrame(columns=columns)
 
         row_id=0
-        for sentence in sentences:
+        for doc in documents:
                 average_vec=np.zeros(size)
-                words=sentence.split(" ")
+                words=doc.split(" ")
                 count=0
                 for word in words:
-                        if word in model.wv.vocab:
-                                average_vec+=model[word]
-                                count+=1
+                        if re.search('[a-zA-Z]',word):
+                                if word.lower() in tfidf_df.columns:
+                                        tf_idf=tfidf_df.ix[row_id,word.lower()]
+                                        tf_idf=1 # tfidf weighting doesnt seem to help for this particular task so I just set it to 1.0
+                                        if word in model.wv.vocab:
+                                                average_vec+=tf_idf*model[word.lower()]
+                                                count+=1
                 if count>0:
                         average_vec=average_vec/count
                 embedding_df.loc[row_id]=average_vec
@@ -310,11 +319,13 @@ class SatireClassifier:
         stopwords  = set(sw.words('english'))
 
         text=text.replace('\n','')
+        text=re.sub(r"([\w/'+$\s-]+|[^\w/'+$\s-]+)\s*", r"\1 ", text) #add spaces between words and punctuation marks
+        text = re.sub('(?<! )(?=["\'.,!?()])|(?<=["\'.,!?()])(?! )', r' ', text) #add space between punctuation marks
         words=text.split(" ")
         filtered_text=[]
         for word in words:
-                if word.lower() not in stopwords:
-                        if len(word)>0:   
+                if ((stemmer.stem(word.lower()) not in stopwords) and (word.lower() not in stopwords)):
+                        if len(word)>0:
                                 filtered_text.append(word)
 
         tokens = nltk.word_tokenize(' '.join(filtered_text))
@@ -499,13 +510,14 @@ class SatireClassifier:
             
         return sentiment_feature_dict
     
-    def _load_text(self, data_dirpath, vectorizer=None):
+    def _load_text(self, data_dirpath, vectorizer_count=None, vectorizer_tfidf=None):
         """ Parses and tokenises the input document files
 
         :param data_dirpath: the directory containing the documents
-        :param vectorizer: scikit vectorizer to extract corpus counts (optional)
-        :returns: vectorizer, pandas dataframe containing features, list of documents (corpus_list), mapping of document names to positions in the list of documents (corpus_list)
-        :rtype: vectorizer, pandas dataframe, list, dictionary
+        :param count_vectorizer: scikit vectorizer to extract corpus counts (optional)
+        :param tfidf_vectorizer: scikit vectorizer to extract corpus tfidf (optional)
+        :returns: vectorizer_count, vectorizer_tfidf, pandas dataframe containing features,pandas dataframe containing features, list of documents (corpus_list), mapping of document names to positions in the list of documents (corpus_list)
+        :rtype: vectorizer, vectorizer, pandas dataframe, pandas dataframe, list, dictionary
 
         """
         corpus_list=[]
@@ -533,23 +545,28 @@ class SatireClassifier:
         '''
         Extract count features from the text
         '''
-        if not vectorizer:
+        if not vectorizer_count:
                 '''
                 We have not passed in a vectorizer, so create one. Else transform the dataset using the provided vectorizer e.g. so the training and testing datasets share the same words.
                 '''
-                vectorizer = CountVectorizer(ngram_range=(1,1),token_pattern=r"(?u)\b\w\w+\b|\*|!|\?|\"|\'", encoding="ISO-8859-1",strip_accents='unicode')
-                '''
-                vectorizer = TfidfVectorizer(ngram_range=(1,1),token_pattern=r"(?u)\b\w\w+\b|\*|!|\?|\"|\'", encoding="ISO-8859-1",strip_accents='unicode')
-                TfidfVectorizer(sublinear_tf=True, max_df=0.75, stop_words='english')
-        '''
-                corpus_counts = vectorizer.fit_transform(corpus_list)
+                vectorizer_count = CountVectorizer(ngram_range=(1,1),token_pattern=r"(?u)\b\w\w+\b|\*|!|\?|\"|\'", encoding="ISO-8859-1",strip_accents='unicode')
+                
+                vectorizer_tfidf = TfidfVectorizer(ngram_range=(1,1),token_pattern=r"(?u)\b\w\w+\b|\*|!|\?|\"|\'", encoding="ISO-8859-1",strip_accents='unicode', sublinear_tf=False)
+                #TfidfVectorizer(sublinear_tf=True, max_df=0.75, stop_words='english')
+
+                corpus_counts = vectorizer_count.fit_transform(corpus_list)
+                corpus_tfidf = vectorizer_tfidf.fit_transform(corpus_list)
         else:
-                corpus_counts = vectorizer.transform(corpus_list)
+                corpus_counts = vectorizer_count.transform(corpus_list)
+                corpus_tfidf = vectorizer_tfidf.transform(corpus_list)
+                
         '''
         Store the features and column names in a pandas dataframe for ease of manipulation. The words in the corpus are the column headings.
         '''
-        corpus_counts_df = pd.DataFrame(corpus_counts.toarray(), columns=vectorizer.get_feature_names())
-        return vectorizer,corpus_counts_df, corpus_list, document_name_to_id_dict
+        corpus_counts_df = pd.DataFrame(corpus_counts.toarray(), columns=vectorizer_count.get_feature_names())
+        corpus_tfidf_df = pd.DataFrame(corpus_tfidf.toarray(), columns=vectorizer_tfidf.get_feature_names())
+ 
+        return vectorizer_count, vectorizer_tfidf, corpus_counts_df, corpus_tfidf_df, corpus_list, document_name_to_id_dict
 
     def _add_labels_to_documents(self,text_df,doc_name_to_id_dict,labels_dict):
         """Adds satire/non-satire labels to the correct documents in the pandas dataframe
@@ -652,12 +669,12 @@ class SatireClassifier:
         training_labels_dict=self._load_labels(self.training_labels_filepath)
         testing_labels_dict=self._load_labels(self.testing_labels_filepath)
         
-        vectorizer,training_text_df,training_sentences,training_doc_name_to_id_dict=self._load_text(self.training_dirpath)
+        count_vectorizer,tfidf_vectorizer,training_text_df,training_tfidf_df,training_sentences,training_doc_name_to_id_dict=self._load_text(self.training_dirpath)
         training_sentiment_feature_dict=self._extract_sentiment_from_text(training_sentences, training_doc_name_to_id_dict)
         training_token_feature_dict=self._extract_token_features_from_text(training_sentences, training_doc_name_to_id_dict)
         training_watch_word_feature_dict=self._extract_watch_word_features_from_text(training_sentences, training_doc_name_to_id_dict)
     
-        _,testing_text_df,testing_sentences,testing_doc_name_to_id_dict=self._load_text(self.testing_dirpath, vectorizer)
+        _,_,testing_text_df,testing_tfidf_df,testing_sentences,testing_doc_name_to_id_dict=self._load_text(self.testing_dirpath, count_vectorizer, tfidf_vectorizer)
         testing_sentiment_feature_dict=self._extract_sentiment_from_text(testing_sentences, testing_doc_name_to_id_dict)
         testing_token_feature_dict=self._extract_token_features_from_text(testing_sentences, testing_doc_name_to_id_dict)
         testing_watch_word_feature_dict=self._extract_watch_word_features_from_text(testing_sentences, testing_doc_name_to_id_dict)
@@ -687,21 +704,26 @@ class SatireClassifier:
         '''
         Try out the experimental sentiment, token and intensifier/interjection features (they seem to help the task)
         '''        
+        
+        
         training_text_df=self._add_sentiment_to_documents(training_text_df,training_doc_name_to_id_dict, training_sentiment_feature_dict)
         testing_text_df=self._add_sentiment_to_documents(testing_text_df,testing_doc_name_to_id_dict, testing_sentiment_feature_dict)
         
         training_text_df=self._add_token_features_to_documents(training_text_df,training_doc_name_to_id_dict, training_token_feature_dict)
         testing_text_df=self._add_token_features_to_documents(testing_text_df,testing_doc_name_to_id_dict, testing_token_feature_dict)
-          
+         
         testing_text_df=self._add_watch_word_features_to_documents(testing_text_df,testing_doc_name_to_id_dict, testing_watch_word_feature_dict)
         training_text_df=self._add_watch_word_features_to_documents(training_text_df,training_doc_name_to_id_dict, training_watch_word_feature_dict)
-     
+        
+        feature_names=self._get_best_features(training_text_df.loc[:,training_text_df.columns != 'Label'].values, training_text_df['Label'].values, testing_text_df.loc[:,testing_text_df.columns != 'Label'].values, training_text_df.loc[:,training_text_df.columns != 'Label'].columns.values, number_top_features=30)
+        print feature_names
+        
         '''
         Normalise the count based features using MaxAbsScaler which is recommended for sparse feature sets
         training_text_df,scaler=self._normalise_sparse_features(training_text_df)
         testing_text_df,_=self._normalise_sparse_features(testing_text_df,scaler)
         '''
-        return training_text_df,training_doc_name_to_id_dict,training_labels_dict,training_sentences,testing_text_df,testing_doc_name_to_id_dict,testing_labels_dict,testing_sentences
+        return training_text_df,training_doc_name_to_id_dict,training_labels_dict,training_sentences,testing_text_df,testing_doc_name_to_id_dict,testing_labels_dict,testing_sentences, training_tfidf_df,testing_tfidf_df
 
     def _test(self,testing_features_df,best_models_dict):
         """Computes the f1 score on a test dataset using the best model found during cross-validation
@@ -717,7 +739,7 @@ class SatireClassifier:
         score=metrics.f1_score(testing_features_df['Label'].values,pred)
         logger.info("F1-score on the testing dataset: " + str('{0:.2f}'.format(score)))
 
-    def _load_continuous_data(self,training_sentences,training_doc_name_to_id_dict, training_labels_dict, testing_sentences, testing_doc_name_to_id_dict, testing_labels_dict):
+    def _load_continuous_data(self,training_sentences,training_doc_name_to_id_dict, training_labels_dict, testing_sentences, testing_doc_name_to_id_dict, testing_labels_dict, training_tfidf_df, testing_tfidf_df):
         """Extracts continuous features from our documents, in this case word2vec features
 
         :param training_sentences: list of training sentences
@@ -726,12 +748,14 @@ class SatireClassifier:
         :param testing_sentences: list of testing sentences
         :param testing_doc_name_to_id_dict: dictionary mapping document name to position in the sentences list
         :param testing_labels_dict: dictionary mapping document name to its corresponding label
+        :param training_tfidf_df: pandas dataframe containing tfidf features
+        :param testing_tfidf_df: pandas dataframe containing tfidf features
         :returns: pandas dataframes representing the continuous features extracted from the training and testing datasets 
         :rtype: pandas dataframe, pandas dataframe
 
         """
-        training_embedding_df,model=self._get_word2vec_features(training_sentences,size=10)
-        testing_embedding_df,_=self._get_word2vec_features(testing_sentences,size=10,model=model)
+        training_embedding_df,model=self._get_word2vec_features(training_sentences,training_tfidf_df,size=5)
+        testing_embedding_df,_=self._get_word2vec_features(testing_sentences,testing_tfidf_df,size=5,model=model)
         training_embedding_df=self._add_labels_to_documents(training_embedding_df,training_doc_name_to_id_dict, training_labels_dict)
         testing_embedding_df=self._add_labels_to_documents(testing_embedding_df,testing_doc_name_to_id_dict, testing_labels_dict)
 
@@ -785,9 +809,9 @@ class SatireClassifier:
                     '''
                     Extract text features and load the training and testing datasets into pandas dataframes
                     '''
-                    training_text_df,training_doc_name_to_id_dict,training_labels_dict,training_sentences,testing_text_df,testing_doc_name_to_id_dict,testing_labels_dict,testing_sentences=self._load_discrete_data()
+                    training_text_df,training_doc_name_to_id_dict,training_labels_dict,training_sentences,testing_text_df,testing_doc_name_to_id_dict,testing_labels_dict,testing_sentences,training_tfidf_df,testing_tfidf_df=self._load_discrete_data()
 
-                    training_embedding_df,testing_embedding_df=self._load_continuous_data(training_sentences,training_doc_name_to_id_dict, training_labels_dict, testing_sentences, testing_doc_name_to_id_dict, testing_labels_dict)
+                    training_embedding_df,testing_embedding_df=self._load_continuous_data(training_sentences,training_doc_name_to_id_dict, training_labels_dict, testing_sentences, testing_doc_name_to_id_dict, testing_labels_dict, training_tfidf_df,testing_tfidf_df)
 
                     positive_count=training_text_df[training_text_df['Label']==1].shape[0]
                     negative_count=training_text_df[training_text_df['Label']==0].shape[0]
@@ -829,8 +853,9 @@ class SatireClassifier:
                     '''
                     training_probs_features_df=self._add_labels_to_documents(training_probs_features_df,training_doc_name_to_id_dict, training_labels_dict)
                     testing_probs_features_df=self._add_labels_to_documents(testing_probs_features_df,testing_doc_name_to_id_dict, testing_labels_dict)
-
+                    
                     best_models_dict=self._cross_validate(training_probs_features_df, n_folds, positive_weight, negative_weight, 'GaussianNB')
+                    
                     '''
                     Run the best model once on the testing dataset reporting the result
                     '''
