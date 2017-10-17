@@ -691,7 +691,7 @@ class SatireClassifier:
         logger.info("Size of training dataset: " + str(training_text_df.shape[0])+"x"+str(training_text_df.shape[1]))
         logger.info("Size of testing dataset: " + str(testing_text_df.shape[0]) +"x"+ str(testing_text_df.shape[1]))
         
-        feature_names=self._get_best_features(training_text_df.loc[:,training_text_df.columns != 'Label'].values, training_text_df['Label'].values, testing_text_df.loc[:,testing_text_df.columns != 'Label'].values, training_text_df.loc[:,training_text_df.columns != 'Label'].columns.values, number_top_features=1000)
+        feature_names=self._get_best_features(training_text_df.loc[:,training_text_df.columns != 'Label'].values, training_text_df['Label'].values, testing_text_df.loc[:,testing_text_df.columns != 'Label'].values, training_text_df.loc[:,training_text_df.columns != 'Label'].columns.values, number_top_features=5000)
         '''
         Filter the training and testing datasets according to the best features found in get_best_features
         '''
