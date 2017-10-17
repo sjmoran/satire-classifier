@@ -55,7 +55,7 @@ The following 30 features were found to be most discriminative using a Chi2 test
 
 1. !
 2. '
-3. *
+3. \*
 4. 2008
 5. ?
 6. ass
